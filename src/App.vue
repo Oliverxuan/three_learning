@@ -4,11 +4,12 @@
 
 <script setup lang='ts'>
 import * as THREE from "three"
-import TWEEN from "@tweenjs/tween.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import { reactive, ref, onMounted } from 'vue'
-import { color } from "three/examples/jsm/nodes/Nodes.js";
+import alphaTex from "./assets/textrue/alphaTex.png";
+import uv from "./assets/textrue/uv.png";
+import { log } from "console";
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(
   45,//视角
@@ -16,26 +17,11 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 )
+camera.position.z = 5
 // 创建渲染器
 const renderer = new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth, window.innerHeight)
 document.body.appendChild(renderer.domElement)
-
-const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshBasicMaterial({ color: "#ffff00" })
-const cube = new THREE.Mesh(geometry, material)
-// scene.add(cube)
-
-let parentCube = new THREE.BoxGeometry(2,2,2)
-const materials = new THREE.MeshBasicMaterial({ color: "#00ff00" })
-const parentsCube = new THREE.Mesh(parentCube, materials)
-// scene.add(parentsCube)
-parentsCube.add(cube)
-parentsCube.position.set(4,0,0)
-parentsCube.scale.set(2,2,2)
-cube.position.set(2,0,0)
-camera.position.z = 5
-camera.lookAt(0, 0, 0) 
 
 // 添加世界坐标辅助器
 const axesHelper = new THREE.AxesHelper(5)
@@ -43,47 +29,110 @@ scene.add(axesHelper)
 
 const loop = () => {
   requestAnimationFrame(loop)
-  cube.rotation.x += 0.01
-  cube.rotation.y += 0.01
   renderer.render(scene, camera)
-  controls.update(); 
-  
+  controls.update();
+
 }
 
 //  响应式监听窗口变化
-const resizeListen = ()=>{
-  window.addEventListener('resize',()=>{
-    renderer.setSize(window.innerWidth,window.innerHeight)
-    camera.aspect = window.innerWidth/window.innerHeight
+const resizeListen = () => {
+  window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    camera.aspect = window.innerWidth / window.innerHeight
     camera.updateProjectionMatrix()
   })
 }
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
-// GUI 快速调试
-const gui = new GUI()
-const cubeFolder = gui.addFolder("cube属性")
-cubeFolder.add(cube.position,"x",-5,5).name("cube的x位置").step(1)
-cubeFolder.add(cube.position,"y",-5,5).name("cube的y位置")
-cubeFolder.add(cube.position,"y",-5,5).name("cube的y位置")
-let colorParms ={
-  cubeColor: '#FFFFFF'
-}
-gui.addColor(colorParms,"cubeColor").name("cube的color").onChange((val=>{
-  cube.material.color.set(val)
-}))
+
+const TextureLoader = new THREE.TextureLoader()
+
+const texture = TextureLoader.load(alphaTex)
+const uvtexture = TextureLoader.load(uv)
+
+// 色差问题
+texture.colorSpace = THREE.SRGBColorSpace
+const cube = new THREE.PlaneGeometry(1, 1)
+
+// const material = new THREE.MeshBasicMaterial({
+//   color: '#ffff00',
+//   transparent: true,
+//   alphaMap: texture
+// })
+
+// const mesh = new THREE.Mesh(cube, material)
+// const box = new THREE.BoxGeometry(1, 100, 1)
+// const boxmaterial = new THREE.MeshBasicMaterial({
+//   color: '#0000ff',
+// })
+// const boxMesh = new THREE.Mesh(box, boxmaterial)
 
 
-const geometryMy = new THREE.BufferGeometry()
-// 逆时针为正面  doubleSide
-const points = new Float32Array([-1.0,-1.0,0.0,1.0,-1.0,0.0,1.0,1.0,0.0])
-geometryMy.setAttribute("position",new THREE.BufferAttribute(points,3))
-const mer = new THREE.MeshBasicMaterial({
-  color:"#FFFF00",
+// scene.add(mesh)
+// scene.add(boxMesh)
+// scene.fog = new THREE.Fog("#ff00ff", 1, 50)
+
+
+// // GUI 快速调试
+// const gui = new GUI()
+
+
+// gui.add(mesh.position, "x", -10, 10)
+// gui.add(mesh.position, "y", -10, 10)
+// gui.add(mesh.position, "z", -10, 10)
+
+const plane = new THREE.PlaneGeometry(2, 2, 2)
+
+const material = new THREE.MeshBasicMaterial({
+  map: uvtexture
 })
-const mes = new THREE.Mesh(geometryMy,mer)
-scene.add(mes)
+
+const mesh = new THREE.Mesh(plane, material)
+// scene.add(mesh)
+
+const Geometry = new THREE.BufferGeometry()
+
+const points = new Float32Array([-1, -1, 0,
+  1, -1, 0,
+  1, 1, 0,
+-1, 1, 0,])
+
+const uvPosition = new Float32Array([
+  0, 0, 1, 0, 1, 1, 0, 1
+])
+
+Geometry.setAttribute("uv", new THREE.BufferAttribute(uvPosition, 2))
+
+const indices = new Uint16Array([0, 1, 2, 2, 3, 0])
+Geometry.setIndex(new THREE.BufferAttribute(indices, 1))
+Geometry.setAttribute("position", new THREE.BufferAttribute(points, 3))
+
+const geoMaterial = new THREE.MeshBasicMaterial({
+  map: uvtexture
+  // color: "#ffffff"
+})
+
+// const cubes = new THREE.Mesh(Geometry, geoMaterial)
+// scene.add(cubes)
+// console.log(cubes);
+
+const sc = new THREE.DodecahedronGeometry(2, 4)
+const sds = new THREE.Mesh(sc, geoMaterial)
+sds.position.set(2, 2, 0)
+scene.add(sds)
+
+const hep = sds.geometry
+// hep.computeBoundingBox()
+// const hepx: any = hep.boundingBox
+// sds.updateWorldMatrix(true, true)
+// hepx?.applyMatrix4(sds.matrixWorld)
+const hepx = new THREE.Box3().setFromObject(sds)
+let box = new THREE.Box3Helper(hepx, "#ff00ff")
+scene.add(box)
+
+let cen = hepx.getCenter(new THREE.Vector3())
+console.log(cen);
 
 onMounted(() => {
   loop()
